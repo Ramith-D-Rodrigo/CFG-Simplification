@@ -1,4 +1,4 @@
-import { Grammar, ProductionRule } from "./definitions.js";
+import { Grammar, ProductionRule, ALPHABET_LOWER, ALPHABET_UPPER } from "./definitions.js";
 const removeCommas = (str) => {
     str = str.replace(/\s/g, '');
     let arr = str.split(',');
@@ -17,7 +17,7 @@ const addNewInputField = (e) => {
     newInputField.classList.add('production-rule');
     const newInput = document.createElement('input');
     newInput.setAttribute('type', 'text');
-    newInput.setAttribute('placeholder', 'Enter production rule');
+    newInput.setAttribute('placeholder', 'Enter The Production Rule');
     newInput.setAttribute('required', '');
     newInput.classList.add('production-rule-input');
     const removeBtn = document.createElement('button');
@@ -55,9 +55,17 @@ const inputValidation = (e) => {
                         flag = false;
                         break;
                     }
+                    else if (!ALPHABET_UPPER.includes(arr[i])) {
+                        flag = false;
+                        break;
+                    }
                 }
                 else {
                     if (arr[i] !== arr[i].toLowerCase()) {
+                        flag = false;
+                        break;
+                    }
+                    else if (!ALPHABET_LOWER.includes(arr[i])) {
                         flag = false;
                         break;
                     }
@@ -91,6 +99,10 @@ const inputValidation = (e) => {
                         triggeredInput.classList.add('is-invalid');
                         triggeredInput.classList.remove('is-valid');
                     }
+                    else if (!ALPHABET_UPPER.includes(leftSide)) {
+                        triggeredInput.classList.add('is-invalid');
+                        triggeredInput.classList.remove('is-valid');
+                    }
                     else {
                         triggeredInput.classList.remove('is-invalid');
                         triggeredInput.classList.add('is-valid');
@@ -113,8 +125,10 @@ const createProductionRules = (productionRules) => {
 };
 const createGrammar = (nonTerminals, terminals, productionRules) => {
     const productionRulesArr = createProductionRules(productionRules);
-    const grammarTerminals = removeCommas(terminals);
-    const grammarNonTerminals = removeCommas(nonTerminals);
+    const grammarTerminalsIt = new Set(removeCommas(terminals)).values();
+    const grammarNonTerminalsIt = new Set(removeCommas(nonTerminals)).values();
+    const grammarNonTerminals = Array.from(grammarNonTerminalsIt);
+    const grammarTerminals = Array.from(grammarTerminalsIt);
     const grammar = new Grammar(grammarTerminals, grammarNonTerminals, productionRulesArr);
     return grammar;
 };

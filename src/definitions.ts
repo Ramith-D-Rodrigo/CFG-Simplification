@@ -1,8 +1,20 @@
-class ProductionRule {
+const ALPHABET_LOWER : string[] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+const ALPHABET_UPPER : string[] = ALPHABET_LOWER.map((letter) => letter.toUpperCase());
+const MAX_EXECUTION_TIME_USELESS_PRODUCTION_FIND : number = 3000; //in milliseconds
+const MAX_EXECUTION_TIME_ALGORITHM : number = 5000; //in milliseconds
+const START_SYMBOL : string = 'S';
+
+type uselessReturnObj = {
+    nonReachableNonTerminals : string[],
+    uselessProductions : ProductionRule[]
+}
+
+class ProductionRule extends Object {
     private nonTerminal : string;
     private derivations : string[];
 
     constructor(userInput: string) {    //userInput is the input entered by the user in the production rules input field (that is validated)
+        super();
         const arr : string[] = userInput.split('->');
 
         //arr[0] contains the non-terminal
@@ -40,6 +52,38 @@ class ProductionRule {
     removeDuplicateDerivations() : void {
         this.derivations = [...new Set(this.derivations)];
     }
+
+    isEqual(productionRule: ProductionRule) : boolean {
+        if(this.nonTerminal !== productionRule.getNonTerminal()) {
+            return false;
+        }
+
+        let derivations1 : string[] = this.derivations;
+        let derivations2 : string[] = productionRule.getDerivations();
+
+        if(derivations1.length !== derivations2.length) {
+            return false;
+        }
+
+        for(let i = 0; i < derivations1.length; i++) {
+            if(derivations1[i] !== derivations2[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    override toString() : string {
+        let str : string = this.nonTerminal + ' -> ';
+        for(let i = 0; i < this.derivations.length; i++) {
+            str += this.derivations[i];
+            if(i !== this.derivations.length - 1) {
+                str += ' | ';
+            }
+        }
+        return str;
+    }
 }
 
 class Grammar {
@@ -48,11 +92,34 @@ class Grammar {
     private productionRules : ProductionRule[];
     private startSymbol : string;
 
-    constructor(terminals: string[], nonTerminals: string[], productionRules: ProductionRule[], startSymbol: string = 'S') {
+    constructor(terminals: string[], nonTerminals: string[], productionRules: ProductionRule[], startSymbol: string = START_SYMBOL) {
         this.terminals = terminals;
-        this.nonTerminals = nonTerminals;
+        this.nonTerminals = [];
+        this.nonTerminals.push(startSymbol);
+        this.nonTerminals.push(...nonTerminals);    //add the start symbol to the non-terminals
         this.productionRules = productionRules;
         this.startSymbol = startSymbol;
+    }
+
+    removeNonTerminal(nonTerminal: string) : void {
+        let index = this.nonTerminals.indexOf(nonTerminal);
+        if(index > -1) {
+            this.nonTerminals.splice(index, 1);
+        }
+    }
+
+    removeTerminal(terminal: string) : void {
+        let index = this.terminals.indexOf(terminal);
+        if(index > -1) {
+            this.terminals.splice(index, 1);
+        }
+    }
+
+    removeProductionRule(productionRule: ProductionRule) : void {
+        let index = this.productionRules.indexOf(productionRule);
+        if(index > -1) {
+            this.productionRules.splice(index, 1);
+        }
     }
 
     getTerminals() : string[] {
@@ -86,7 +153,6 @@ class Grammar {
         return null;
     }
 
-
     hasEpsilonProductions() : boolean { //returns true if the grammar has epsilon productions
         for(let i = 0; i < this.productionRules.length; i++) {
             if(this.productionRules[i].getDerivations().includes('e')) {
@@ -96,18 +162,109 @@ class Grammar {
         return false;
     }
 
-    hasUnitProductions() : boolean { //returns true if the grammar has unit productions
+    getUnitProductions() : ProductionRule[] { //returns an array of non-terminals that have unit productions
+        let unitProductions : ProductionRule[] = [];
         for(let i = 0; i < this.productionRules.length; i++) {
-            if(this.productionRules[i].getDerivations().length === 1 && this.productionRules[i].getDerivations()[0].length === 1 && this.nonTerminals.includes(this.productionRules[i].getDerivations()[0])) {
-                return true;
+            const unitProduction : string[] = this.productionRules[i].getDerivations().filter(derivation => this.getNonTerminals().includes(derivation));
+            if(unitProduction.length > 0){
+                let tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + unitProduction.join('|'));
+                unitProductions.push(tempProduction);
             }
+        }
+        return unitProductions;
+    }
+
+    hasUnitProductions() : boolean { //returns true if the grammar has unit productions
+        if(this.getUnitProductions().length > 0){
+            return true;
         }
         return false;
     }
 
+    getNextDerivations(derivation : string, nonTerminal : string) : string[]{   //returns an array of derivations after replacing the non-terminal with its next derivations
+        //derivation is the derivation that we want to replace
+        //nonTerminal is the non-terminal that we want to replace the derivation with
+        let nextDerivations : string[];
+        nextDerivations = this.getProductionsForNonTerminal(nonTerminal)!.getDerivations();
+
+        //replace the non-terminal in the derivation with the next derivations
+        let newDerivation : string[] = [];
+        for(let i = 0; i < nextDerivations.length; i++) {
+            newDerivation.push(derivation.replace(nonTerminal, nextDerivations[i]));
+        }
+
+        return newDerivation;
+    }
+
+    getUselessProductions() : uselessReturnObj{ //returns an array of non-terminals that have useless productions
+        //first check for productions that are unreachable
+        let nonReachableNonTerminals : string[] = this.getNonTerminals().filter(i => i !== this.getStartSymbol()); //at first, all the non-terminals are unreachable
+        //ignore start symbol from nonReachableNonTerminals as it is reachable by default
+
+        //start with start symbol
+        let queue : string[] = [this.getStartSymbol()]; //queue for BFS
+        while(queue.length > 0) {
+            let currentNonTerminal : string = queue.shift()!; //get the first element from the queue
+            const currentProduction : string[] | undefined = this.getProductionsForNonTerminal(currentNonTerminal)?.getDerivations(); //get the production rules for the current non-terminal
+            currentProduction?.forEach((derivation) => { //go through all the derivations
+                for(let j = 0; j < this.getNonTerminals().length; j++) { //go through all the non-terminals
+                    if(derivation.includes(this.getNonTerminals()[j])) { //if the derivation contains a non-terminal
+                        if(nonReachableNonTerminals.includes(this.getNonTerminals()[j])) { //if the non-terminal is already in the nonReachableNonTerminals array
+                            nonReachableNonTerminals.splice(nonReachableNonTerminals.indexOf(this.getNonTerminals()[j]), 1); //remove the non-terminal from the nonReachableNonTerminals array
+                            queue.push(this.getNonTerminals()[j]); //add the non-terminal to the queue
+                        }
+                    }
+                }
+            });
+        }
+        //check for infinite derivations (productions that derive to themselves so they are useless)
+        //mark the productions that derive a terminal
+        let markedProductions : ProductionRule[] = [];
+        let allProductions : ProductionRule[] = []; //this is to divide all the productions individually (for example, A->B|C will be divided into A->B and A->C)
+        for(let i = 0; i < this.productionRules.length; i++) {
+            const derivations = this.productionRules[i].getDerivations();
+            for(let j = 0; j < derivations.length; j++){    //go through all the derivations of the current production
+                if(this.getTerminals().includes(derivations[j]) && derivations[j].length === 1){   //particular derivation is exactly a terminal
+                    const tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + derivations[j]);
+                    markedProductions.push(tempProduction);
+                }
+
+                //add the production to the allProductions array
+                const tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + derivations[j]);
+                allProductions.push(tempProduction);
+            }
+        }
+
+        let uselessProductions : ProductionRule[] = [];
+        //go through all the productions
+        for(let i = 0; i < allProductions.length; i++){
+            //check if the production is marked
+            for(let j = 0; j < markedProductions.length; j++){
+                if(allProductions[i].isEqual(markedProductions[j])){
+                    //the production is marked
+                    //no need to check further
+                    break;
+                }
+                if(j === markedProductions.length - 1){
+                    //the production is not marked
+                    //add it to the uselessProductions array
+                    uselessProductions.push(allProductions[i]);
+                }
+            }
+        }
+        //now we have the productions that don't derive a terminal
+        return {nonReachableNonTerminals : nonReachableNonTerminals, uselessProductions : uselessProductions};
+    }
+
+    hasUselessProductions() : boolean{
+        if(this.getUselessProductions().nonReachableNonTerminals.length > 0 || this.getUselessProductions().uselessProductions.length > 0){
+            return true;
+        }
+        return false;
+    }
 
     //step 1 -> remove epsilon productions (e productions)
-    removeEpsilonProductions() : Grammar{
+    removeEpsilonProductions() : void{
         //find a non-terminal with epsilon production
         let epsilonNonTerminals : string[] = [];
 
@@ -125,11 +282,11 @@ class Grammar {
                     if(derivation.includes(epsilonNonTerminals[i])){    //if the production contains the non-terminal that produces epsilon
                         //replace the non-terminal with epsilon
                         let newDerivation : string | string[] = derivation;
-                        if(newDerivation.length === 1){    //if the non-terminal is the only symbol in the production
-                            newDerivation = 'e';  //replace it with epsilon
+                        let epsilonNonTerminalDerivations = this.getProductionsForNonTerminal(epsilonNonTerminals[i])?.getDerivations();
+                        //check whether this epsilon production is the only production of the non-terminal
+                        if(newDerivation.length === 1 && epsilonNonTerminalDerivations?.length === 1 && epsilonNonTerminalDerivations[0] === 'e'){   
                             this.productionRules[j].removeDerivation(derivation);    //remove the old production
                             this.productionRules[j].addDerivation(newDerivation as string);    //add the new production
-
                         }
                         else{
                             //have to check all the possible combinations
@@ -166,6 +323,7 @@ class Grammar {
                                     //remove the non-terminal at index nonTerminalIndexes[j]
                                     tempArr.splice(nonTerminalIndexes[l]!, 1);
                                     let newDerivationStr : string = tempArr.join('');
+                                    if(newDerivationStr === '') newDerivationStr = 'e'; //if the derivation is empty, replace it with epsilon
                                     //console.log(newDerivationStr);
                                     if(!addingDerivations.includes(newDerivationStr)){
                                         addingDerivations.push(newDerivationStr);
@@ -194,19 +352,84 @@ class Grammar {
             const nonTerminalDerivations : ProductionRule | null = this.getProductionsForNonTerminal(epsilonNonTerminals[i]);
             nonTerminalDerivations?.removeDerivation('e');
         }
-        return this;
     }
 
     //step 2 -> remove unit productions
-    removeUnitProductions() : Grammar{
-        return this;
+    removeUnitProductions() : void{
+        //find the unit productions
+        let unitProductions : ProductionRule[] = this.getUnitProductions();
+
+        //replace the unit productions
+        for(let i = 0; i < unitProductions.length; i++){
+            //find the productions for the non-terminal
+            //unit productions have only one derivation (A -> B)
+            //so we can just get the first derivation
+            //unitProductions[i].getDerivations()[0] is B (for A -> B)
+            //we need to get all derivations of B to replace A -> B and add them to A
+            const nonTerminalDerivations : string[] = this.getProductionsForNonTerminal(unitProductions[i].getDerivations()[0])!.getDerivations();
+            const addingNonTerminal : string = unitProductions[i].getNonTerminal();
+            for(let j = 0; j < nonTerminalDerivations.length; j++){
+                //add the new production
+                this.getProductionsForNonTerminal(addingNonTerminal)!.addDerivation(nonTerminalDerivations[j]);
+            }
+            //remove the unit production
+            this.getProductionsForNonTerminal(addingNonTerminal)!.removeDerivation(unitProductions[i].getDerivations()[0]);
+        }
     }
 
     //step 3 -> remove useless symbols
-    removeUselessSymbols() : Grammar{
-        return this;
+    removeUselessProductions() : void{
+        const uselessOnes : uselessReturnObj = this.getUselessProductions();
+        console.log(uselessOnes);
+
+
+        if(uselessOnes.nonReachableNonTerminals.length > 0){    //has non-reachable non-terminals
+            //remove the non-reachable non-terminals
+            for(let i = 0; i < uselessOnes.nonReachableNonTerminals.length; i++){
+                //first remove the production rules for the non-terminal
+                const removingRules = this.getProductionsForNonTerminal(uselessOnes.nonReachableNonTerminals[i]);
+                this.removeProductionRule(removingRules!);
+
+                //now remove the non-terminal from the alphabet
+                this.removeNonTerminal(uselessOnes.nonReachableNonTerminals[i]);
+            }
+        }
+
+        if(uselessOnes.uselessProductions.length > 0){   //has useless productions (that don't produce terminals)
+            for(let i = 0; i < uselessOnes.uselessProductions.length; i++){
+                const nonTerminal = uselessOnes.uselessProductions[i].getNonTerminal();
+                //find the production rules for the non-terminal
+                const allRules = this.getProductionsForNonTerminal(nonTerminal);
+
+                console.log('allRules: ', allRules);
+                console.log('belong to: ', nonTerminal);
+
+                console.log('current production rules: ', this.getProductionRules());
+
+                for(let j = 0; j < allRules!.getDerivations().length; j++){
+                    if(allRules!.getDerivations()[j] === uselessOnes.uselessProductions[i].getDerivations()[0]){
+                        //remove the production rule (uselessOnes.uselessProductions[i].getDerivations()[0] is the derivation that is useless)
+                        allRules!.removeDerivation(uselessOnes.uselessProductions[i].getDerivations()[0]);
+                        break; //break out of the loop because we found the production rule that we want to remove
+                    }
+                }
+            }
+        }
     }
 
+    //copy constructor
+    copy() : Grammar{
+        let newGrammar : Grammar = new Grammar(this.terminals, this.nonTerminals, this.productionRules);
+        return newGrammar;
+    }
+    
+    printGrammar() : void{
+        console.log('Non-terminals: ', this.nonTerminals);
+        console.log('Terminals: ', this.terminals);
+        console.log('Start symbol: ', this.startSymbol);
+        console.log('Production rules: ');
+        console.log(this.productionRules);
+    }
 }
 
-export { Grammar, ProductionRule };
+export { Grammar, ProductionRule, ALPHABET_LOWER, ALPHABET_UPPER };

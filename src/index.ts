@@ -27,7 +27,7 @@ terminalInput?.addEventListener('change', inputValidation);
 addBtn?.addEventListener('click', addNewInputField);
 
 //add the event listener to the form
-userForm?.addEventListener('submit', (e : Event) => {
+userForm?.addEventListener('submit', async (e : Event) => {
     e.preventDefault();
 
     //get all the input fields
@@ -57,21 +57,36 @@ userForm?.addEventListener('submit', (e : Event) => {
         productionRulesInputValues.push(input.value);
     });
 
-
     const grammar = createGrammar(nonTerminalInputValue, terminalInputValue, productionRulesInputValues);
-    //console.log(grammar);
+    //simplify the grammar
 
-    //normalize the grammar
-
+    //first copy the grammar
+    const startingGrammar = grammar.copy();
+    console.log("Starting Grammar");
+    console.log(JSON.parse(JSON.stringify(startingGrammar)));    //to avoid circular reference error
     //1st step -> remove epsilon productions
-    grammar.removeEpsilonProductions();
-    console.log(grammar);
+    while(grammar.hasEpsilonProductions()){
+        grammar.removeEpsilonProductions();
+    }
 
     //2nd step -> remove unit productions
-    //grammar.removeUnitProductions();
+    const epsilonRemovedGrammar = grammar.copy();
+    console.log("Epsilon Removed Grammar");
+    console.log(JSON.parse(JSON.stringify(epsilonRemovedGrammar)));    //to avoid circular reference error
+    while(grammar.hasUnitProductions()){
+        grammar.removeUnitProductions();
+    }
 
     //3rd step -> remove useless symbols
-    //grammar.removeUselessSymbols();
+    const unitRemovedGrammar = grammar.copy();
+    console.log("Unit Removed Grammar");
+    console.log(JSON.parse(JSON.stringify(unitRemovedGrammar)));    //to avoid circular reference error
+    while(grammar.hasUselessProductions()){
+        grammar.removeUselessProductions();
+    }
+    const finalGrammar = grammar;
+    console.log("Final Grammar");
+    console.log(JSON.parse(JSON.stringify(finalGrammar)));    //to avoid circular reference error
 });
 
 

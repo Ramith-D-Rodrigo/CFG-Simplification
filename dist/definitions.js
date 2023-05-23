@@ -1,5 +1,11 @@
-class ProductionRule {
+const ALPHABET_LOWER = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+const ALPHABET_UPPER = ALPHABET_LOWER.map((letter) => letter.toUpperCase());
+const MAX_EXECUTION_TIME_USELESS_PRODUCTION_FIND = 3000;
+const MAX_EXECUTION_TIME_ALGORITHM = 5000;
+const START_SYMBOL = 'S';
+class ProductionRule extends Object {
     constructor(userInput) {
+        super();
         const arr = userInput.split('->');
         let rules = arr[1].split('|');
         for (let i = 0; i < rules.length; i++) {
@@ -26,13 +32,59 @@ class ProductionRule {
     removeDuplicateDerivations() {
         this.derivations = [...new Set(this.derivations)];
     }
+    isEqual(productionRule) {
+        if (this.nonTerminal !== productionRule.getNonTerminal()) {
+            return false;
+        }
+        let derivations1 = this.derivations;
+        let derivations2 = productionRule.getDerivations();
+        if (derivations1.length !== derivations2.length) {
+            return false;
+        }
+        for (let i = 0; i < derivations1.length; i++) {
+            if (derivations1[i] !== derivations2[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+    toString() {
+        let str = this.nonTerminal + ' -> ';
+        for (let i = 0; i < this.derivations.length; i++) {
+            str += this.derivations[i];
+            if (i !== this.derivations.length - 1) {
+                str += ' | ';
+            }
+        }
+        return str;
+    }
 }
 class Grammar {
-    constructor(terminals, nonTerminals, productionRules, startSymbol = 'S') {
+    constructor(terminals, nonTerminals, productionRules, startSymbol = START_SYMBOL) {
         this.terminals = terminals;
-        this.nonTerminals = nonTerminals;
+        this.nonTerminals = [];
+        this.nonTerminals.push(startSymbol);
+        this.nonTerminals.push(...nonTerminals);
         this.productionRules = productionRules;
         this.startSymbol = startSymbol;
+    }
+    removeNonTerminal(nonTerminal) {
+        let index = this.nonTerminals.indexOf(nonTerminal);
+        if (index > -1) {
+            this.nonTerminals.splice(index, 1);
+        }
+    }
+    removeTerminal(terminal) {
+        let index = this.terminals.indexOf(terminal);
+        if (index > -1) {
+            this.terminals.splice(index, 1);
+        }
+    }
+    removeProductionRule(productionRule) {
+        let index = this.productionRules.indexOf(productionRule);
+        if (index > -1) {
+            this.productionRules.splice(index, 1);
+        }
     }
     getTerminals() {
         return this.terminals;
@@ -65,11 +117,79 @@ class Grammar {
         }
         return false;
     }
-    hasUnitProductions() {
+    getUnitProductions() {
+        let unitProductions = [];
         for (let i = 0; i < this.productionRules.length; i++) {
-            if (this.productionRules[i].getDerivations().length === 1 && this.productionRules[i].getDerivations()[0].length === 1 && this.nonTerminals.includes(this.productionRules[i].getDerivations()[0])) {
-                return true;
+            const unitProduction = this.productionRules[i].getDerivations().filter(derivation => this.getNonTerminals().includes(derivation));
+            if (unitProduction.length > 0) {
+                let tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + unitProduction.join('|'));
+                unitProductions.push(tempProduction);
             }
+        }
+        return unitProductions;
+    }
+    hasUnitProductions() {
+        if (this.getUnitProductions().length > 0) {
+            return true;
+        }
+        return false;
+    }
+    getNextDerivations(derivation, nonTerminal) {
+        let nextDerivations;
+        nextDerivations = this.getProductionsForNonTerminal(nonTerminal).getDerivations();
+        let newDerivation = [];
+        for (let i = 0; i < nextDerivations.length; i++) {
+            newDerivation.push(derivation.replace(nonTerminal, nextDerivations[i]));
+        }
+        return newDerivation;
+    }
+    getUselessProductions() {
+        var _a;
+        let nonReachableNonTerminals = this.getNonTerminals().filter(i => i !== this.getStartSymbol());
+        let queue = [this.getStartSymbol()];
+        while (queue.length > 0) {
+            let currentNonTerminal = queue.shift();
+            const currentProduction = (_a = this.getProductionsForNonTerminal(currentNonTerminal)) === null || _a === void 0 ? void 0 : _a.getDerivations();
+            currentProduction === null || currentProduction === void 0 ? void 0 : currentProduction.forEach((derivation) => {
+                for (let j = 0; j < this.getNonTerminals().length; j++) {
+                    if (derivation.includes(this.getNonTerminals()[j])) {
+                        if (nonReachableNonTerminals.includes(this.getNonTerminals()[j])) {
+                            nonReachableNonTerminals.splice(nonReachableNonTerminals.indexOf(this.getNonTerminals()[j]), 1);
+                            queue.push(this.getNonTerminals()[j]);
+                        }
+                    }
+                }
+            });
+        }
+        let markedProductions = [];
+        let allProductions = [];
+        for (let i = 0; i < this.productionRules.length; i++) {
+            const derivations = this.productionRules[i].getDerivations();
+            for (let j = 0; j < derivations.length; j++) {
+                if (this.getTerminals().includes(derivations[j]) && derivations[j].length === 1) {
+                    const tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + derivations[j]);
+                    markedProductions.push(tempProduction);
+                }
+                const tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + derivations[j]);
+                allProductions.push(tempProduction);
+            }
+        }
+        let uselessProductions = [];
+        for (let i = 0; i < allProductions.length; i++) {
+            for (let j = 0; j < markedProductions.length; j++) {
+                if (allProductions[i].isEqual(markedProductions[j])) {
+                    break;
+                }
+                if (j === markedProductions.length - 1) {
+                    uselessProductions.push(allProductions[i]);
+                }
+            }
+        }
+        return { nonReachableNonTerminals: nonReachableNonTerminals, uselessProductions: uselessProductions };
+    }
+    hasUselessProductions() {
+        if (this.getUselessProductions().nonReachableNonTerminals.length > 0 || this.getUselessProductions().uselessProductions.length > 0) {
+            return true;
         }
         return false;
     }
@@ -83,10 +203,11 @@ class Grammar {
         for (let i = 0; i < epsilonNonTerminals.length; i++) {
             for (let j = 0; j < this.productionRules.length; j++) {
                 this.productionRules[j].getDerivations().forEach((derivation, index) => {
+                    var _a;
                     if (derivation.includes(epsilonNonTerminals[i])) {
                         let newDerivation = derivation;
-                        if (newDerivation.length === 1) {
-                            newDerivation = 'e';
+                        let epsilonNonTerminalDerivations = (_a = this.getProductionsForNonTerminal(epsilonNonTerminals[i])) === null || _a === void 0 ? void 0 : _a.getDerivations();
+                        if (newDerivation.length === 1 && (epsilonNonTerminalDerivations === null || epsilonNonTerminalDerivations === void 0 ? void 0 : epsilonNonTerminalDerivations.length) === 1 && epsilonNonTerminalDerivations[0] === 'e') {
                             this.productionRules[j].removeDerivation(derivation);
                             this.productionRules[j].addDerivation(newDerivation);
                         }
@@ -112,6 +233,8 @@ class Grammar {
                                     let tempArr = newDerivationArr.slice();
                                     tempArr.splice(nonTerminalIndexes[l], 1);
                                     let newDerivationStr = tempArr.join('');
+                                    if (newDerivationStr === '')
+                                        newDerivationStr = 'e';
                                     if (!addingDerivations.includes(newDerivationStr)) {
                                         addingDerivations.push(newDerivationStr);
                                         queue.push(newDerivationStr);
@@ -131,13 +254,54 @@ class Grammar {
             const nonTerminalDerivations = this.getProductionsForNonTerminal(epsilonNonTerminals[i]);
             nonTerminalDerivations === null || nonTerminalDerivations === void 0 ? void 0 : nonTerminalDerivations.removeDerivation('e');
         }
-        return this;
     }
     removeUnitProductions() {
-        return this;
+        let unitProductions = this.getUnitProductions();
+        for (let i = 0; i < unitProductions.length; i++) {
+            const nonTerminalDerivations = this.getProductionsForNonTerminal(unitProductions[i].getDerivations()[0]).getDerivations();
+            const addingNonTerminal = unitProductions[i].getNonTerminal();
+            for (let j = 0; j < nonTerminalDerivations.length; j++) {
+                this.getProductionsForNonTerminal(addingNonTerminal).addDerivation(nonTerminalDerivations[j]);
+            }
+            this.getProductionsForNonTerminal(addingNonTerminal).removeDerivation(unitProductions[i].getDerivations()[0]);
+        }
     }
-    removeUselessSymbols() {
-        return this;
+    removeUselessProductions() {
+        const uselessOnes = this.getUselessProductions();
+        console.log(uselessOnes);
+        if (uselessOnes.nonReachableNonTerminals.length > 0) {
+            for (let i = 0; i < uselessOnes.nonReachableNonTerminals.length; i++) {
+                const removingRules = this.getProductionsForNonTerminal(uselessOnes.nonReachableNonTerminals[i]);
+                this.removeProductionRule(removingRules);
+                this.removeNonTerminal(uselessOnes.nonReachableNonTerminals[i]);
+            }
+        }
+        if (uselessOnes.uselessProductions.length > 0) {
+            for (let i = 0; i < uselessOnes.uselessProductions.length; i++) {
+                const nonTerminal = uselessOnes.uselessProductions[i].getNonTerminal();
+                const allRules = this.getProductionsForNonTerminal(nonTerminal);
+                console.log('allRules: ', allRules);
+                console.log('belong to: ', nonTerminal);
+                console.log('current production rules: ', this.getProductionRules());
+                for (let j = 0; j < allRules.getDerivations().length; j++) {
+                    if (allRules.getDerivations()[j] === uselessOnes.uselessProductions[i].getDerivations()[0]) {
+                        allRules.removeDerivation(uselessOnes.uselessProductions[i].getDerivations()[0]);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    copy() {
+        let newGrammar = new Grammar(this.terminals, this.nonTerminals, this.productionRules);
+        return newGrammar;
+    }
+    printGrammar() {
+        console.log('Non-terminals: ', this.nonTerminals);
+        console.log('Terminals: ', this.terminals);
+        console.log('Start symbol: ', this.startSymbol);
+        console.log('Production rules: ');
+        console.log(this.productionRules);
     }
 }
-export { Grammar, ProductionRule };
+export { Grammar, ProductionRule, ALPHABET_LOWER, ALPHABET_UPPER };
