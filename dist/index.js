@@ -12,9 +12,6 @@ const addBtn = document.querySelector('#add-btn');
 const nonTerminalInput = document.querySelector('#non-terminals');
 const terminalInput = document.querySelector('#terminals');
 const userForm = document.querySelector('form');
-let nonTerminals = [];
-let terminals = [];
-let productionRules = [];
 nonTerminalInput === null || nonTerminalInput === void 0 ? void 0 : nonTerminalInput.addEventListener('change', inputValidation);
 terminalInput === null || terminalInput === void 0 ? void 0 : terminalInput.addEventListener('change', inputValidation);
 addBtn === null || addBtn === void 0 ? void 0 : addBtn.addEventListener('click', addNewInputField);
@@ -62,7 +59,6 @@ userForm === null || userForm === void 0 ? void 0 : userForm.addEventListener('s
     console.log("Final Grammar");
     console.log(JSON.parse(JSON.stringify(finalGrammar)));
     const finalGrammarDiv = document.querySelector('#final-grammar');
-    finalGrammarDiv === null || finalGrammarDiv === void 0 ? void 0 : finalGrammarDiv.classList.remove('d-none');
     const productionsDiv = finalGrammarDiv.querySelector('#new-production-rules');
     productionsDiv.innerHTML = '';
     const prodRules = finalGrammar.getProductionRules();
@@ -72,4 +68,5 @@ userForm === null || userForm === void 0 ? void 0 : userForm.addEventListener('s
         div.innerHTML = prodRules[i].toString();
         productionsDiv === null || productionsDiv === void 0 ? void 0 : productionsDiv.appendChild(div);
     }
+    productionsDiv === null || productionsDiv === void 0 ? void 0 : productionsDiv.classList.remove('d-none');
 }));

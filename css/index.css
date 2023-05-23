@@ -1,9 +1,152 @@
+main{
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    flex-direction: row;
+    width: 100%;
+    margin: 1rem;
+    flex-wrap: wrap;
+}
+
+body{
+    background-color: rgb(47, 85, 255);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+h1{
+    margin: 1rem;
+    padding: 1rem;
+    text-align: center;
+}
+
+.box{
+    background: rgba(105, 67, 228, 0.35);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(9.8px);
+    -webkit-backdrop-filter: blur(9.8px);
+    border: 1px solid rgba(99, 67, 204, 0.53);
+    display : flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    margin: 1rem;
+    width: 45%;
+    min-height: 100vh;
+}
+
+.box > *{
+    padding: 0.5rem;
+}
+
+
 .is-invalid{
-    border: 2px solid red;
-    border-radius: 3px;
+    border: 0.2rem solid red;
 }
 
 .is-valid{
-    border: 2px solid green;
-    border-radius: 3px;
+    border: 0.2rem solid green;
+}
+
+.icon-btn{
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    color: rgb(47, 85, 255);
+    padding: 0;
+    font-size: 2rem;
+}
+
+.notice{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    margin: 0.5rem;
+    color: black;
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.production-rule-input{
+    width: 100%;
+}
+
+.production-rule{
+    display: flex;
+    justify-content: center;
+    align-items: space-between;
+    flex-direction: row;
+    width: 100%;
+}
+
+.production-rules-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 50%;
+}
+
+.remove-btn{
+    color: red;
+}
+
+.production-rule > *{
+    margin: 0.5rem;
+}
+
+.input-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.btn-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0.5rem;
+}
+
+input{
+    border-radius: 2rem;
+    border: none;
+    outline: none;
+    text-align: center;   
+    width: 100%;
+}
+
+input:focus{
+    border: 0.2rem solid rgb(47, 85, 255);
+}
+
+#normalize-btn{
+    outline: none;
+    cursor: pointer;
+    color: rgb(47, 85, 255);
+    border-radius: 2.5rem;
+    background-color: white;
+    border:rgb(47, 85, 255) 0.2rem solid;
+}
+
+@media(max-width: 700px){
+    .box{
+        width: 100%;
+        margin: 1rem 0;
+        min-height: unset;
+    }
+
+    main{
+        flex-direction: column;
+    }
+
+    .production-rules-container{
+        width: 100%;
+    }
 }

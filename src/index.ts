@@ -11,11 +11,6 @@ const terminalInput : HTMLInputElement | null = document.querySelector('#termina
 //user form
 const userForm : HTMLFormElement | null = document.querySelector('form');
 
-//variables to store the input values
-let nonTerminals : string[] = [];
-let terminals : string[] = [];
-let productionRules : string[] = [];
-
 //Event Listeners
 
 //add the event listeners to the input fields
@@ -90,7 +85,6 @@ userForm?.addEventListener('submit', async (e : Event) => {
 
     //display the final grammar
     const finalGrammarDiv : HTMLDivElement | null = document.querySelector('#final-grammar');
-    finalGrammarDiv?.classList.remove('d-none');
 
     const productionsDiv : HTMLDivElement | null = finalGrammarDiv!.querySelector('#new-production-rules');
     productionsDiv!.innerHTML = ''; //clear the div
@@ -103,6 +97,8 @@ userForm?.addEventListener('submit', async (e : Event) => {
         div.innerHTML = prodRules[i].toString();
         productionsDiv?.appendChild(div);   
     }
+
+    productionsDiv?.classList.remove('d-none');
 });
 
 

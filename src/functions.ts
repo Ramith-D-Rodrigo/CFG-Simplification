@@ -36,7 +36,8 @@ const addNewInputField = (e : Event) : void => {
     //remove button to remove the input field
     const removeBtn = document.createElement('button');
     removeBtn.classList.add('remove-btn');
-    removeBtn.innerHTML = 'X';
+    removeBtn.classList.add('icon-btn');
+    removeBtn.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
 
     newInputField.appendChild(newInput);
     newInputField.appendChild(removeBtn);

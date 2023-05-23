@@ -22,7 +22,8 @@ const addNewInputField = (e) => {
     newInput.classList.add('production-rule-input');
     const removeBtn = document.createElement('button');
     removeBtn.classList.add('remove-btn');
-    removeBtn.innerHTML = 'X';
+    removeBtn.classList.add('icon-btn');
+    removeBtn.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
     newInputField.appendChild(newInput);
     newInputField.appendChild(removeBtn);
     inputContainer === null || inputContainer === void 0 ? void 0 : inputContainer.appendChild(newInputField);
