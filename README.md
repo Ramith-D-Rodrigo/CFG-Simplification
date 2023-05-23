@@ -7,3 +7,6 @@
  - TypeScript (Compiled to JavaScript)
  
  ## App Screenshots
+ 
+ ![App Interface](/ss/view1.png)
+ ![Example Simplification](/ss/view2.png)
