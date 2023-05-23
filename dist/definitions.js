@@ -62,9 +62,7 @@ class ProductionRule extends Object {
 class Grammar {
     constructor(terminals, nonTerminals, productionRules, startSymbol = START_SYMBOL) {
         this.terminals = terminals;
-        this.nonTerminals = [];
-        this.nonTerminals.push(startSymbol);
-        this.nonTerminals.push(...nonTerminals);
+        this.nonTerminals = nonTerminals;
         this.productionRules = productionRules;
         this.startSymbol = startSymbol;
     }
@@ -134,18 +132,10 @@ class Grammar {
         }
         return false;
     }
-    getNextDerivations(derivation, nonTerminal) {
-        let nextDerivations;
-        nextDerivations = this.getProductionsForNonTerminal(nonTerminal).getDerivations();
-        let newDerivation = [];
-        for (let i = 0; i < nextDerivations.length; i++) {
-            newDerivation.push(derivation.replace(nonTerminal, nextDerivations[i]));
-        }
-        return newDerivation;
-    }
     getUselessProductions() {
         var _a;
-        let nonReachableNonTerminals = this.getNonTerminals().filter(i => i !== this.getStartSymbol());
+        let nonReachableNonTerminals = this.getNonTerminals().map(i => i);
+        nonReachableNonTerminals.splice(nonReachableNonTerminals.indexOf(this.getStartSymbol()), 1);
         let queue = [this.getStartSymbol()];
         while (queue.length > 0) {
             let currentNonTerminal = queue.shift();
@@ -163,12 +153,15 @@ class Grammar {
         }
         let markedProductions = [];
         let allProductions = [];
+        let nonTerminalsThatDeriveTerminals = [];
         for (let i = 0; i < this.productionRules.length; i++) {
             const derivations = this.productionRules[i].getDerivations();
             for (let j = 0; j < derivations.length; j++) {
-                if (this.getTerminals().includes(derivations[j]) && derivations[j].length === 1) {
+                const derivationArray = derivations[j].split('');
+                if (derivationArray.every((element) => this.getTerminals().includes(element))) {
                     const tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + derivations[j]);
                     markedProductions.push(tempProduction);
+                    nonTerminalsThatDeriveTerminals.push(this.productionRules[i].getNonTerminal());
                 }
                 const tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + derivations[j]);
                 allProductions.push(tempProduction);
@@ -178,6 +171,17 @@ class Grammar {
         for (let i = 0; i < allProductions.length; i++) {
             for (let j = 0; j < markedProductions.length; j++) {
                 if (allProductions[i].isEqual(markedProductions[j])) {
+                    break;
+                }
+                const derivationArray = allProductions[i].getDerivations()[0].split('');
+                let isMarked = false;
+                for (let k = 0; k < derivationArray.length; k++) {
+                    if (nonTerminalsThatDeriveTerminals.includes(derivationArray[k])) {
+                        isMarked = true;
+                        break;
+                    }
+                }
+                if (isMarked) {
                     break;
                 }
                 if (j === markedProductions.length - 1) {
@@ -268,7 +272,6 @@ class Grammar {
     }
     removeUselessProductions() {
         const uselessOnes = this.getUselessProductions();
-        console.log(uselessOnes);
         if (uselessOnes.nonReachableNonTerminals.length > 0) {
             for (let i = 0; i < uselessOnes.nonReachableNonTerminals.length; i++) {
                 const removingRules = this.getProductionsForNonTerminal(uselessOnes.nonReachableNonTerminals[i]);
@@ -280,9 +283,6 @@ class Grammar {
             for (let i = 0; i < uselessOnes.uselessProductions.length; i++) {
                 const nonTerminal = uselessOnes.uselessProductions[i].getNonTerminal();
                 const allRules = this.getProductionsForNonTerminal(nonTerminal);
-                console.log('allRules: ', allRules);
-                console.log('belong to: ', nonTerminal);
-                console.log('current production rules: ', this.getProductionRules());
                 for (let j = 0; j < allRules.getDerivations().length; j++) {
                     if (allRules.getDerivations()[j] === uselessOnes.uselessProductions[i].getDerivations()[0]) {
                         allRules.removeDerivation(uselessOnes.uselessProductions[i].getDerivations()[0]);
@@ -304,4 +304,4 @@ class Grammar {
         console.log(this.productionRules);
     }
 }
-export { Grammar, ProductionRule, ALPHABET_LOWER, ALPHABET_UPPER };
+export { Grammar, ProductionRule, ALPHABET_LOWER, ALPHABET_UPPER, START_SYMBOL };

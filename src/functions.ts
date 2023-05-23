@@ -1,4 +1,4 @@
-import { Grammar, ProductionRule, ALPHABET_LOWER, ALPHABET_UPPER } from "./definitions.js";
+import { Grammar, ProductionRule, ALPHABET_LOWER, ALPHABET_UPPER, START_SYMBOL } from "./definitions.js";
 
 //functions
 
@@ -172,6 +172,9 @@ const createGrammar = (nonTerminals : string, terminals : string, productionRule
     const grammarNonTerminalsIt = new Set(removeCommas(nonTerminals)).values();   //remove commas and duplicate non-terminals
 
     const grammarNonTerminals = Array.from(grammarNonTerminalsIt);
+    //add start symbol to the non-terminals array 0th index
+    grammarNonTerminals.unshift(START_SYMBOL);
+
     const grammarTerminals = Array.from(grammarTerminalsIt);
 
     const grammar : Grammar = new Grammar(grammarTerminals, grammarNonTerminals, productionRulesArr);

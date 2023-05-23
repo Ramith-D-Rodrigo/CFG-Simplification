@@ -87,6 +87,22 @@ userForm?.addEventListener('submit', async (e : Event) => {
     const finalGrammar = grammar;
     console.log("Final Grammar");
     console.log(JSON.parse(JSON.stringify(finalGrammar)));    //to avoid circular reference error
+
+    //display the final grammar
+    const finalGrammarDiv : HTMLDivElement | null = document.querySelector('#final-grammar');
+    finalGrammarDiv?.classList.remove('d-none');
+
+    const productionsDiv : HTMLDivElement | null = finalGrammarDiv!.querySelector('#new-production-rules');
+    productionsDiv!.innerHTML = ''; //clear the div
+    
+    const prodRules = finalGrammar.getProductionRules();
+
+    for(let i = 0; i < prodRules.length; i++){
+        const div = document.createElement('div');
+        div.classList.add('d-flex', 'justify-content-center', 'align-items-center', 'mb-2');
+        div.innerHTML = prodRules[i].toString();
+        productionsDiv?.appendChild(div);   
+    }
 });
 
 
