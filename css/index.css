@@ -126,7 +126,7 @@ input:focus{
     border: 0.2rem solid rgb(47, 85, 255);
 }
 
-#normalize-btn{
+#simplify-btn{
     outline: none;
     cursor: pointer;
     color: rgb(47, 85, 255);
