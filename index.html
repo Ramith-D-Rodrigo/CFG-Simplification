@@ -12,9 +12,9 @@
     <body>
         <main>
             <form class="user-input-container box">
-                <h1>Context Free Grammar Simplication</h1>
+                <h1>Context Free Grammar Simplification</h1>
                 <div class="notice">
-                    The following are the symbols are defined by default:
+                    The following are the symbols that are defined by default:
                     <div class="symbols">
                         Start Symbol = S
                         <br>
@@ -23,12 +23,16 @@
                 </div>
                 <div class="notice">
                     Enter the Non Terminal Symbols (Must be Upper Case) (Start Symbol is not needed) separated by comma (,) 
+                    <br>
+                    Ex: A,B,C
                 </div>
                 <div class="input-container">
                     <input type="text" placeholder="Non-Terminal Symbols" name="non-terminals" id="non-terminals" required>  
                 </div>
                 <div class="notice">
-                    Enter the Terminal Symbols (Must be Lower Case) (Empty String is not needed) separated by comma (,) 
+                    Enter the Terminal Symbols (Must be Lower Case) (Empty String is not needed) separated by comma (,)
+                    <br>
+                    Ex: a,b,c,d 
                 </div>  
                 <div class="input-container">
                     <input type="text" placeholder="Terminal Symbols" name="terminals" id="terminals" required>
@@ -36,11 +40,11 @@
                 <div class="notice">
                     Click the button (+) to add the production rules.
                     <br>
-                    Enter the production rules in the format:
+                    Enter the production rules in the following format:
                     <br>
                     A -> aB | bC
                     <br>
-                    where A is a Non Terminal Symbol, a and b are Terminal Symbols and B and C are Non Terminal Symbols. | is used to separate the production rules.
+                    where A is a Non Terminal Symbol, a and b are Terminal Symbols and B and C are Non Terminal Symbols. "|" is used to separate the production rules.
                 </div>
                 <div class="btn-container">
                     <button id="add-btn" class="icon-btn"><i class="fa-solid fa-circle-plus"></i></button>
