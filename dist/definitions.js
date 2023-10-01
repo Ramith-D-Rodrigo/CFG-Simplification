@@ -133,7 +133,7 @@ class Grammar {
         return false;
     }
     getUselessProductions() {
-        var _a;
+        var _a, _b;
         let nonReachableNonTerminals = this.getNonTerminals().map(i => i);
         nonReachableNonTerminals.splice(nonReachableNonTerminals.indexOf(this.getStartSymbol()), 1);
         let queue = [this.getStartSymbol()];
@@ -141,11 +141,14 @@ class Grammar {
             let currentNonTerminal = queue.shift();
             const currentProduction = (_a = this.getProductionsForNonTerminal(currentNonTerminal)) === null || _a === void 0 ? void 0 : _a.getDerivations();
             currentProduction === null || currentProduction === void 0 ? void 0 : currentProduction.forEach((derivation) => {
+                console.log("checking ", derivation, " for ", currentNonTerminal);
                 for (let j = 0; j < this.getNonTerminals().length; j++) {
                     if (derivation.includes(this.getNonTerminals()[j])) {
                         if (nonReachableNonTerminals.includes(this.getNonTerminals()[j])) {
+                            console.log("Before splice", JSON.parse(JSON.stringify(nonReachableNonTerminals)));
                             nonReachableNonTerminals.splice(nonReachableNonTerminals.indexOf(this.getNonTerminals()[j]), 1);
                             queue.push(this.getNonTerminals()[j]);
+                            console.log("After splice", JSON.parse(JSON.stringify(nonReachableNonTerminals)));
                         }
                     }
                 }
@@ -159,18 +162,70 @@ class Grammar {
             for (let j = 0; j < derivations.length; j++) {
                 const derivationArray = derivations[j].split('');
                 if (derivationArray.every((element) => this.getTerminals().includes(element))) {
+                    console.log(this.productionRules[i].getNonTerminal() + '->' + derivations[j] + ' contains only terminals');
                     const tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + derivations[j]);
                     markedProductions.push(tempProduction);
                     nonTerminalsThatDeriveTerminals.push(this.productionRules[i].getNonTerminal());
+                }
+                else {
+                    console.log(this.productionRules[i].getNonTerminal() + '->' + derivations[j] + ' contains non-terminals');
+                    let queue = [];
+                    let visited = [];
+                    let derivesTerminals = false;
+                    let nonTerminalsInDerivation = derivationArray.filter((element) => this.getNonTerminals().includes(element));
+                    queue.push(...nonTerminalsInDerivation);
+                    while (queue.length > 0) {
+                        console.log('queue: ', queue);
+                        console.log('visited: ', visited);
+                        let currentNonTerminal = queue.shift();
+                        console.log('currentNonTerminal: ', currentNonTerminal);
+                        if (visited.includes(currentNonTerminal)) {
+                            console.log('cycle detected');
+                            continue;
+                        }
+                        else {
+                            visited.push(currentNonTerminal);
+                            console.log('visited: ', visited);
+                            console.log('currentNonTerminal: ', currentNonTerminal);
+                            console.log('this.getProductionsForNonTerminal(currentNonTerminal): ', this.getProductionsForNonTerminal(currentNonTerminal));
+                            const currentProduction = (_b = this.getProductionsForNonTerminal(currentNonTerminal)) === null || _b === void 0 ? void 0 : _b.getDerivations();
+                            console.log('currentProduction: ', currentProduction);
+                            if (currentProduction !== undefined) {
+                                for (let k = 0; k < currentProduction.length; k++) {
+                                    console.log('currentProduction[k]: ', currentProduction[k]);
+                                    const tempDerivationArray = currentProduction[k].split('');
+                                    if (tempDerivationArray.every((element) => this.getTerminals().includes(element))) {
+                                        console.log(this.productionRules[i].getNonTerminal() + '->' + derivations[j] + ' contains only terminals');
+                                        const tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + derivations[j]);
+                                        markedProductions.push(tempProduction);
+                                        nonTerminalsThatDeriveTerminals.push(this.productionRules[i].getNonTerminal());
+                                        derivesTerminals = true;
+                                        break;
+                                    }
+                                    let nonTerminalsInDerivation = tempDerivationArray.filter((element) => this.getNonTerminals().includes(element));
+                                    console.log('nonTerminalsInDerivation: ', nonTerminalsInDerivation);
+                                    queue.push(...nonTerminalsInDerivation);
+                                }
+                            }
+                            if (derivesTerminals) {
+                                break;
+                            }
+                        }
+                    }
                 }
                 const tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + derivations[j]);
                 allProductions.push(tempProduction);
             }
         }
-        let uselessProductions = [];
+        console.log('markedProductions: ', markedProductions);
+        console.log('allProductions: ', allProductions);
+        console.log('non terminals that derive terminals: ', nonTerminalsThatDeriveTerminals);
+        let uselessProductions;
+        uselessProductions = allProductions.map((production) => production);
         for (let i = 0; i < allProductions.length; i++) {
             for (let j = 0; j < markedProductions.length; j++) {
                 if (allProductions[i].isEqual(markedProductions[j])) {
+                    uselessProductions.splice(uselessProductions.indexOf(allProductions[i]), 1);
                     break;
                 }
                 const derivationArray = allProductions[i].getDerivations()[0].split('');
@@ -182,13 +237,12 @@ class Grammar {
                     }
                 }
                 if (isMarked) {
+                    uselessProductions.splice(uselessProductions.indexOf(allProductions[i]), 1);
                     break;
-                }
-                if (j === markedProductions.length - 1) {
-                    uselessProductions.push(allProductions[i]);
                 }
             }
         }
+        console.log('uselessProductions: ', uselessProductions);
         return { nonReachableNonTerminals: nonReachableNonTerminals, uselessProductions: uselessProductions };
     }
     hasUselessProductions() {

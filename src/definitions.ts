@@ -190,14 +190,14 @@ class Grammar {
             let currentNonTerminal : string = queue.shift()!; //get the first element from the queue
             const currentProduction : string[] | undefined = this.getProductionsForNonTerminal(currentNonTerminal)?.getDerivations(); //get the production rules for the current non-terminal
             currentProduction?.forEach((derivation) => { //go through all the derivations
-                //console.log("checking ", derivation, " for ", currentNonTerminal);
+                console.log("checking ", derivation, " for ", currentNonTerminal);
                 for(let j = 0; j < this.getNonTerminals().length; j++) { //go through all the non-terminals
                     if(derivation.includes(this.getNonTerminals()[j])) { //if the derivation contains a non-terminal
                         if(nonReachableNonTerminals.includes(this.getNonTerminals()[j])) { //if the non-terminal is in the nonReachableNonTerminals array
-                            //console.log("Before splice" ,JSON.parse(JSON.stringify(nonReachableNonTerminals)));
+                            console.log("Before splice" ,JSON.parse(JSON.stringify(nonReachableNonTerminals)));
                             nonReachableNonTerminals.splice(nonReachableNonTerminals.indexOf(this.getNonTerminals()[j]), 1); //remove the non-terminal from the nonReachableNonTerminals array
                             queue.push(this.getNonTerminals()[j]); //add the non-terminal to the queue
-                            //console.log("After splice" ,JSON.parse(JSON.stringify(nonReachableNonTerminals)));
+                            console.log("After splice" ,JSON.parse(JSON.stringify(nonReachableNonTerminals)));
                         }
                     }
                 }
@@ -214,9 +214,80 @@ class Grammar {
                 //check if the current checking derivation contains only terminals
                 const derivationArray = derivations[j].split('');
                 if(derivationArray.every((element) => this.getTerminals().includes(element))){ //if the derivation contains only terminals
+                    console.log(this.productionRules[i].getNonTerminal() + '->' + derivations[j] + ' contains only terminals');
                     const tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + derivations[j]);
                     markedProductions.push(tempProduction);
                     nonTerminalsThatDeriveTerminals.push(this.productionRules[i].getNonTerminal());
+                }
+                else{   //if the derivation contains non-terminals
+                    //then check that all the non-terminals in the derivation derive terminals
+                    //run a BFS to check that all the non-terminals in the derivation derive terminals
+                    //if it has cycles, then it is useless (infinite derivation)
+
+                    console.log(this.productionRules[i].getNonTerminal() + '->' + derivations[j] + ' contains non-terminals');
+
+                    //first create a queue
+                    let queue : string[] = [];
+                    let visited : string[] = [];
+
+                    let derivesTerminals : boolean = false; //to check whether the production derives terminals or not
+                    
+                    //get the non-terminals in the derivation
+                    let nonTerminalsInDerivation : string[] = derivationArray.filter((element) => this.getNonTerminals().includes(element));
+
+                    //add the non-terminals in the derivation to the queue
+                    queue.push(...nonTerminalsInDerivation);
+
+                    //run the BFS
+                    while(queue.length > 0){
+                        console.log('queue: ', queue);
+                        console.log('visited: ', visited);
+                        let currentNonTerminal : string = queue.shift()!;
+                        console.log('currentNonTerminal: ', currentNonTerminal);
+                        if(visited.includes(currentNonTerminal)){
+                            console.log('cycle detected');
+                            //cycle detected
+                            //the production is useless
+                            // go to element in queue
+                            continue;
+                        }
+                        else{
+                            //console.log('currentNonTerminal: ', currentNonTerminal);
+                            visited.push(currentNonTerminal);
+                            console.log('visited: ', visited);
+                            console.log('currentNonTerminal: ', currentNonTerminal);
+                            console.log('this.getProductionsForNonTerminal(currentNonTerminal): ', this.getProductionsForNonTerminal(currentNonTerminal));
+                            const currentProduction : string[] | undefined = this.getProductionsForNonTerminal(currentNonTerminal)?.getDerivations();
+                            console.log('currentProduction: ', currentProduction);
+                            if(currentProduction !== undefined){
+                                for(let k = 0; k < currentProduction.length; k++){
+                                    console.log('currentProduction[k]: ', currentProduction[k]);
+                                    const tempDerivationArray = currentProduction[k].split('');
+
+                                    if(tempDerivationArray.every((element) => this.getTerminals().includes(element))){ //if the derivation contains only terminals
+                                        //the production derives terminals
+                                        //mark it
+                                        console.log(this.productionRules[i].getNonTerminal() + '->' + derivations[j] + ' contains only terminals');
+                                        const tempProduction = new ProductionRule(this.productionRules[i].getNonTerminal() + '->' + derivations[j]);
+                                        markedProductions.push(tempProduction);
+                                        nonTerminalsThatDeriveTerminals.push(this.productionRules[i].getNonTerminal());
+                                        derivesTerminals = true;
+                                        break;
+                                    }
+
+                                    let nonTerminalsInDerivation : string[] = tempDerivationArray.filter((element) => this.getNonTerminals().includes(element));
+                                    console.log('nonTerminalsInDerivation: ', nonTerminalsInDerivation);
+                                    //console.log('nonTerminalsInDerivation: ', nonTerminalsInDerivation);
+                                    queue.push(...nonTerminalsInDerivation);
+                                }
+                            }
+
+                            if(derivesTerminals){ //current visited non-terminal derives terminals
+                                break;
+                            }
+                        }
+                    }
+
                 }
 
                 //add the production to the allProductions array
@@ -225,18 +296,23 @@ class Grammar {
             }
         }
 
-        //console.log('markedProductions: ', markedProductions);
-        //console.log('allProductions: ', allProductions);
-        //console.log('non terminals that derive terminals: ', nonTerminalsThatDeriveTerminals);
+        console.log('markedProductions: ', markedProductions);
+        console.log('allProductions: ', allProductions);
+        console.log('non terminals that derive terminals: ', nonTerminalsThatDeriveTerminals);
 
-        let uselessProductions : ProductionRule[] = [];
+        let uselessProductions : ProductionRule[]; //at first all the productions are useless
+        //create a copy of all the productions
+        uselessProductions = allProductions.map((production) => production);
+        
         //go through all the productions
         for(let i = 0; i < allProductions.length; i++){
             //check if the production is marked
             for(let j = 0; j < markedProductions.length; j++){
                 if(allProductions[i].isEqual(markedProductions[j])){
                     //the production is marked
-                    //no need to check further
+                    //then it is not useless
+                    //remove it from the uselessProductions array
+                    uselessProductions.splice(uselessProductions.indexOf(allProductions[i]), 1);
                     break;
                 }
 
@@ -255,17 +331,15 @@ class Grammar {
                 }
 
                 if(isMarked){
+                    //the production is marked
+                    //then it is not useless
+                    //remove it from the uselessProductions array
+                    uselessProductions.splice(uselessProductions.indexOf(allProductions[i]), 1);
                     break;
-                }
-
-                if(j === markedProductions.length - 1){
-                    //the production is not marked
-                    //add it to the uselessProductions array
-                    uselessProductions.push(allProductions[i]);
                 }
             }
         }
-        //console.log('uselessProductions: ', uselessProductions);
+        console.log('uselessProductions: ', uselessProductions);
         //now we have the productions that don't derive a terminal
         return {nonReachableNonTerminals : nonReachableNonTerminals, uselessProductions : uselessProductions};
     }
